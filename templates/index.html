@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+	<link rel="shortcut icon" href="../static/favicon.ico" type="image/ico">
+	<title>Text sorter</title>
+	<style>	
+		select {margin-bottom: 20px;}
+		section{padding: 20px; border: 3px solid #000; background: #f3f3f3;}
+		section[hidden] {border: none;}
+	</style>
+</head>
+<body>
+	<select id="lab">
+		<option  value="0">1. «Сортировщик слов»</option>
+		<option selected value="1">2. «Доска объявлений»</option>
+	</select>
+	<section id="lab-0" hidden>
+		<textarea id="text" cols="30" rows="10">Lorem ipsum dolor sit amet consectetur adipisicing elit Facilis adipisci</textarea>
+		<button id="send">Отправить</button>
+		<button id="clean">Отчистить</button>
+		<p>При клике на кнопку "Отправить" содержимое поля отправляется на сервер, делится на слова (по пробелам), возвращается в качестве списка и отображается ниже. Если уже был какой-то список, то он удаляется.</p>
+		<ol id="result"></ol>
+	</section>
+	<section id="lab-1">
+		<input id="command" type="text">
+		<button id="send-command">Отправить комманду</button>
+		<div id="message"></div>
+	</section>
+	
+	<script type="text/javascript">
+		let sio = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/sio');
+		document.getElementById('lab').onchange = (e) => {
+			let n = parseInt(e.target.value);
+			document.getElementById('lab-'+n).hidden = false;
+			document.getElementById('lab-'+ ((n+1)%2)).hidden = true;
+		}
+		let textField = document.getElementById('text');
+		let commandField = document.getElementById('command');
+
+		let result = document.getElementById('result');
+		let message = document.getElementById('message');
+
+		document.getElementById('clean').onclick = () => textField.value = ''; 
+		document.getElementById('send').onclick  = () => sio.emit('sort', textField.value);
+		document.getElementById('send-command').onclick = () => {
+			if (commandField.value == '') {
+				if (confirm('Отправить пустую команду? Это разорвёт соединение с сервером!')) sio.emit('board', commandField.value);
+			}
+			else sio.emit('board', commandField.value);
+		}
+
+		sio.on('new', (response) => {
+			
+			let words = JSON.parse(response);
+			result.innerHTML = '';
+			for (let word of words)
+			{
+				result.innerHTML += '<li>' + word + '</li>';
+			}
+		});
+
+		sio.on('add', (newBoard) => {
+			message.innerText = 'new board: ' + newBoard;
+		})
+		sio.on('boards', (response) => {
+			let boards = JSON.parse(response);
+			message.innerText = boards.join(';')
+		})
+		sio.on('disconnect', (reason) => alert('Отключено от сервера'));
+	</script>
+</body>
+</html>
