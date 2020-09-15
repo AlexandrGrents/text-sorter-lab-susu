@@ -66,8 +66,7 @@
 			message.innerText = 'new board: ' + newBoard;
 		})
 		sio.on('boards', (response) => {
-			let boards = JSON.parse(response);
-			message.innerText = boards.join(';')
+			message.innerText = response;
 		})
 		sio.on('disconnect', (reason) => alert('Отключено от сервера'));
 	</script>
